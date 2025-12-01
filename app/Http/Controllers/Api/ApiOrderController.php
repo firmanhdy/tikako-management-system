@@ -3,19 +3,28 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Order;
 use Illuminate\Http\Request;
-use App\Models\Order; 
 
 class ApiOrderController extends Controller
 {
-    public function latestOrders(Request $request)
+    /**
+     * API Endpoint for Real-time Order Polling.
+     * Typically called by JavaScript (AJAX/Fetch) in the admin dashboard
+     * to trigger notifications without page reload.
+     */
+    public function latestOrders()
     {
-        $latestOrder = Order::orderBy('id', 'desc')->first();
-        $totalNewOrders = Order::where('status', 'Diterima')->count();        
+        // Retrieve the latest order by ID (descending)
+        $latestOrder = Order::latest('id')->first();
+
+        // Count orders with 'Diterima' status (Pending kitchen processing)
+        $newOrdersCount = Order::where('status', 'Diterima')->count();        
+
         return response()->json([
+            'status' => 'success',
             'latest_order' => $latestOrder,
-            'new_count' => $totalNewOrders,
-            'status' => 'success'
+            'new_count' => $newOrdersCount,
         ]);
     }
 }

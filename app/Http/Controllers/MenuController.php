@@ -2,92 +2,143 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
+use App\Http\Controllers\Controller;
 use App\Models\Menu;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
 class MenuController extends Controller
 {
-
+    /**
+     * Menampilkan daftar menu.
+     */
     public function index()
     {
-        $menus = Menu::orderBy('id', 'desc')->paginate(10);        
+        $menus = Menu::latest()->paginate(10);
         return view('admin.menu.index', compact('menus'));
     }
 
+    /**
+     * Menampilkan form tambah menu.
+     */
     public function create()
     {
         return view('admin.menu.create');
     }
 
+    /**
+     * Menyimpan menu baru ke database.
+     */
     public function store(Request $request)
     {
-        $validatedData = $request->validate([
-            'nama_menu' => 'required|string|max:255',
-            'harga' => 'required|integer',
-            'kategori' => 'required|string',
-            'deskripsi' => 'nullable|string',
-            'is_tersedia' => 'required|boolean',
-            'foto' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
-            'is_rekomendasi' => 'required|boolean'
-        ]);
+        $validated = $request->validate($this->validationRules());
 
-        if ($request->hasFile('foto')) {
-            $path = $request->file('foto')->store('menu_fotos', 'public');
-            $validatedData['foto'] = $path;
+        // Handle Upload Foto
+        if ($path = $this->handleFileUpload($request, 'foto')) {
+            $validated['foto'] = $path;
         }
 
-        Menu::create($validatedData);
+        Menu::create($validated);
 
-        return redirect()->route('menu.index')->with('success', 'Menu baru berhasil ditambahkan!');
+        return to_route('menu.index')->with('success', 'Menu baru berhasil ditambahkan!');
     }
 
+    /**
+     * Menampilkan form edit menu.
+     */
     public function edit(Menu $menu)
     {
         return view('admin.menu.edit', compact('menu'));
     }
 
+    /**
+     * Mengupdate data menu.
+     */
     public function update(Request $request, Menu $menu)
     {
-        $validatedData = $request->validate([
-            'nama_menu' => 'required|string|max:255',
-            'harga' => 'required|integer',
-            'kategori' => 'required|string',
-            'deskripsi' => 'nullable|string',
-            'is_tersedia' => 'required|boolean',
-            'foto' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
-            'is_rekomendasi' => 'required|boolean'
-        ]);
+        $validated = $request->validate($this->validationRules());
 
-        if ($request->hasFile('foto')) {
-            if ($menu->foto) {
-                Storage::disk('public')->delete($menu->foto);
-            }
-            $path = $request->file('foto')->store('menu_fotos', 'public');
-            $validatedData['foto'] = $path; 
+        // Handle Upload Foto (Hapus yang lama jika ada yang baru)
+        if ($path = $this->handleFileUpload($request, 'foto', $menu->foto)) {
+            $validated['foto'] = $path;
         }
-        $menu->update($validatedData);
-        return redirect()->route('menu.index')->with('success', 'Menu berhasil di-update!');
+
+        $menu->update($validated);
+
+        return to_route('menu.index')->with('success', 'Menu berhasil di-update!');
     }
 
+    /**
+     * Menghapus menu beserta fotonya.
+     */
     public function destroy(Menu $menu)
     {
-        if ($menu->foto) {
-            Storage::disk('public')->delete($menu->foto);
-        }
+        $this->deleteFileIfExists($menu->foto);
         $menu->delete();
-        return redirect()->route('menu.index')->with('success', 'Menu berhasil dihapus!');
+
+        return to_route('menu.index')->with('success', 'Menu berhasil dihapus!');
     }
 
-    public function toggleStatus(Request $request, \App\Models\Menu $menu)
+    /**
+     * Mengubah status ketersediaan menu via AJAX/Toggle.
+     */
+    public function toggleStatus(Request $request, Menu $menu)
     {
-        $newStatus = $request->input('status'); 
-        $menu->is_tersedia = $newStatus;
-        $menu->save();
+        $newStatus = $request->boolean('status'); // Helper Laravel untuk konversi ke boolean
+        
+        $menu->update(['is_tersedia' => $newStatus]);
+
         return response()->json([
             'success' => true,
             'new_status' => $menu->is_tersedia,
             'message' => 'Status berhasil diubah menjadi ' . ($newStatus ? 'Tersedia' : 'Habis')
         ]);
+    }
+
+    /* |--------------------------------------------------------------------------
+    | Private Helpers (Encapsulation)
+    |--------------------------------------------------------------------------
+    */
+
+    /**
+     * Aturan validasi dipisah agar tidak ditulis ulang (DRY).
+     */
+    private function validationRules()
+    {
+        return [
+            'nama_menu' => ['required', 'string', 'max:255'],
+            'harga' => ['required', 'integer', 'min:0'],
+            'kategori' => ['required', 'string'],
+            'deskripsi' => ['nullable', 'string'],
+            'is_tersedia' => ['required', 'boolean'],
+            'foto' => ['nullable', 'image', 'mimes:jpeg,png,jpg,gif', 'max:2048'],
+            'is_rekomendasi' => ['required', 'boolean']
+        ];
+    }
+
+    /**
+     * Menangani upload file & penghapusan file lama otomatis.
+     */
+    private function handleFileUpload(Request $request, $key, $oldFile = null)
+    {
+        if ($request->hasFile($key)) {
+            // Jika ada file lama, hapus dulu
+            $this->deleteFileIfExists($oldFile);
+            
+            // Simpan file baru
+            return $request->file($key)->store('menu_fotos', 'public');
+        }
+
+        return null;
+    }
+
+    /**
+     * Hapus file dari storage jika ada.
+     */
+    private function deleteFileIfExists($path)
+    {
+        if ($path && Storage::disk('public')->exists($path)) {
+            Storage::disk('public')->delete($path);
+        }
     }
 }

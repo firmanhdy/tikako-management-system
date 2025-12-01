@@ -168,9 +168,8 @@ return [
     | the cookie from being sent to you when it can't be done securely.
     |
     */
-
-    'secure' => env('SESSION_SECURE_COOKIE'),
-
+    
+    'secure' => env('SESSION_SECURE_COOKIE', true),
     /*
     |--------------------------------------------------------------------------
     | HTTP Access Only

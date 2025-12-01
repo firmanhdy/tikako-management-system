@@ -13,6 +13,9 @@ class LoginController extends Controller
         return view('auth.admin-login'); 
     }
 
+    /**
+     * Handle Admin Authentication.
+     */
     public function adminLogin(Request $request)
     {
         $credentials = $request->validate([
@@ -22,18 +25,27 @@ class LoginController extends Controller
 
         if (Auth::attempt($credentials)) {
             $user = Auth::user();            
+            
+            // Authorization Check: Only Admins allowed
             if ($user->role === 'admin') {
                 $request->session()->regenerate();
-                return redirect()->route('admin.dashboard')->with('success', 'Selamat datang, Admin!');
+                return to_route('admin.dashboard')->with('success', 'Welcome back, Admin!');
             }
-            Auth::logout();
+
+            // Force logout if user is authenticated but not an admin
+            $this->terminateSession($request);
+            
+            return back()->withErrors(['email' => 'Access denied. Administrator privileges required.']);
         }
 
         return back()->withErrors([
-            'email' => 'Kredensial Admin tidak valid (hanya untuk Admin).',
+            'email' => 'Invalid credentials.',
         ])->onlyInput('email');
     }
     
+    /**
+     * Handle User/Customer Authentication.
+     */
     public function login(Request $request)
     {
         $credentials = $request->validate([
@@ -43,31 +55,54 @@ class LoginController extends Controller
 
         if (Auth::attempt($credentials)) {
             $user = Auth::user();
+            
+            // Check Role
             if ($user->role === 'user') {
                 $request->session()->regenerate();
-                return redirect()->intended('/')->with('success', 'Login berhasil!');
+                return redirect()->intended('/')->with('success', 'Login successful!');
             }
-            Auth::logout();
+
+            // Force logout if role mismatch
+            $this->terminateSession($request);
+            
+            return back()->withErrors(['email' => 'Please login via the Admin Portal.']);
         }
+
         return back()->withErrors([
-            'email' => 'Email atau password yang Anda masukkan salah.',
+            'email' => 'Invalid email or password.',
         ])->onlyInput('email');
     }
 
+    /**
+     * Log the user out of the application.
+     */
     public function logout(Request $request)
     {
-        Auth::logout(); 
-        $request->session()->invalidate(); 
-        $request->session()->regenerateToken(); 
-        return redirect('/')->with('success', 'Anda telah berhasil logout.');
+        $this->terminateSession($request);
+        return redirect('/')->with('success', 'You have logged out successfully.');
     }
 
+    /**
+     * Log the admin out.
+     */
     public function adminLogout(Request $request)
     {
-        Auth::logout(); 
+        $this->terminateSession($request);
+        return to_route('admin.login')->with('success', 'Admin session ended.');
+    }
+
+    /* |--------------------------------------------------------------------------
+    | Private Helper
+    |--------------------------------------------------------------------------
+    */
+    
+    /**
+     * Terminate the session (DRY Principle).
+     */
+    private function terminateSession(Request $request)
+    {
+        Auth::logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();
-
-        return redirect()->route('admin.login')->with('success', 'Anda telah logout dari Panel Admin.');
     }
 }

@@ -4,8 +4,7 @@
 
 @section('content')
 
-<div class="container py-5">
-    <h2 class="fw-bold mb-4">Keranjang Belanja</h2>
+    <h1 class="text-center mb-4">Keranjang Belanja Anda</h1>
 
     @if($cartItems->count() > 0)
     <div class="row">
@@ -31,47 +30,33 @@
                                     @php $total += $item->menu->harga * $item->quantity; @endphp
                                     
                                     <tr>
-                                        {{-- Kolom Foto & Nama --}}
                                         <td class="ps-4">
                                             <div class="d-flex align-items-center">
                                                 @if($item->menu->foto)
-                                                    <img src="{{ asset('storage/' . $item->menu->foto) }}" 
-                                                         class="rounded me-3 shadow-sm" 
-                                                         style="width: 60px; height: 60px; object-fit: cover;">
+                                                    <img src="{{ asset('storage/' . $item->menu->foto) }}" alt="{{ $item->menu->nama_menu }}" class="rounded me-3" style="width: 60px; height: 60px; object-fit: cover;">
                                                 @else
-                                                    <img src="https://via.placeholder.com/60" 
-                                                         class="rounded me-3 shadow-sm" 
-                                                         style="width: 60px; height: 60px; object-fit: cover;">
+                                                    <img src="https://placehold.co/60?text=Tikako" class="rounded me-3" style="width: 60px; height: 60px;">
                                                 @endif
-                                                
                                                 <div>
-                                                    <div class="fw-bold text-dark">{{ $item->menu->nama_menu }}</div>
+                                                    <div class="fw-bold">{{ $item->menu->nama_menu }}</div>
                                                     <small class="text-muted">{{ $item->menu->kategori }}</small>
                                                 </div>
                                             </div>
                                         </td>
                                         
-                                        {{-- Kolom Harga Satuan --}}
                                         <td>Rp {{ number_format($item->menu->harga, 0, ',', '.') }}</td>
                                         
-                                        {{-- Kolom Ubah Jumlah (Qty) --}}
                                         <td>
-                                            {{-- Disini tombol +/- hanya tampilan dulu --}}
-                                            <div class="input-group input-group-sm" style="width: 100px;">
-                                                <button class="btn btn-outline-secondary" type="button" disabled>-</button>
-                                                <input type="text" class="form-control text-center bg-white" value="{{ $item->quantity }}" readonly>
-                                                <button class="btn btn-outline-secondary" type="button" disabled>+</button>
-                                            </div>
+                                           <div class="badge bg-light text-dark border px-3 py-2" style="font-size: 0.9rem;">
+                                                {{ $item->quantity }} Porsi
+                                           </div>
                                         </td>
 
-                                        {{-- Kolom Subtotal --}}
                                         <td class="text-end pe-4 fw-bold text-success">
                                             Rp {{ number_format($item->menu->harga * $item->quantity, 0, ',', '.') }}
                                         </td>
 
-                                        {{-- Tombol Hapus (Icon) --}}
                                         <td class="text-center">
-                                            {{-- Route destroy menggunakan Model CartItem --}}
                                             <form action="{{ route('cart.destroy', $item->id) }}" method="POST">
                                                 @csrf
                                                 @method('DELETE')
@@ -96,7 +81,7 @@
 
         {{-- KOLOM KANAN: RINGKASAN & CHECKOUT --}}
         <div class="col-lg-4">
-            <div class="card shadow-sm border-0 sticky-top" style="top: 20px;">
+            <div class="card shadow-sm border-0 sticky-top" style="top: 80px;">
                 <div class="card-header bg-white py-3">
                     <h5 class="mb-0 fw-bold">Ringkasan Pesanan</h5>
                 </div>
@@ -113,18 +98,32 @@
                     <hr class="opacity-25">
 
                     {{-- Form Checkout --}}
-                    <form action="{{ route('checkout') }}" method="POST">
+                    {{-- !! PERBAIKAN 1: Route harus 'cart.checkout' bukan 'checkout' !! --}}
+                    <form action="{{ url('cart.checkout') }}" method="POST">
                         @csrf
                         <div class="mb-3">
                             <label class="form-label small fw-bold">Nomor Meja Anda</label>
-                            {{-- VALUE OTOMATIS DARI SESSION --}}
-                            <input type="number" 
+                            
+                            {{-- !! PERBAIKAN 2: Value Input (Cek kedua jenis session agar aman) !! --}}
+                            <input type="text" 
                                    name="nomor_meja" 
                                    class="form-control form-control-lg bg-light" 
                                    placeholder="Cth: 12" 
-                                   value="{{ session('nomor_meja') }}" 
+                                   value="{{ session('nomor_meja_otomatis') ?? session('nomor_meja') }}" 
                                    required>
-                            <div class="form-text text-muted small">Lihat stiker nomor di meja Anda.</div>
+                            
+                            @if(session('nomor_meja_otomatis') || session('nomor_meja'))
+                                <div class="form-text text-success fw-bold">
+                                    <i class="bi bi-check-circle-fill"></i> Terisi otomatis dari Scan QR!
+                                </div>
+                            @else
+                                <div class="form-text text-muted small">Lihat stiker nomor di meja Anda.</div>
+                            @endif
+                        </div>
+                        
+                        <div class="mb-4">
+                             <label for="note" class="form-label fw-semibold small">Catatan Pesanan (Opsional)</label>
+                             <textarea name="note" id="note" rows="2" class="form-control bg-light" placeholder="Cth: Nasi goreng tidak pedas, Es teh sedikit gula..."></textarea>
                         </div>
 
                         <button type="submit" class="btn btn-success w-100 py-3 fw-bold shadow-sm">
@@ -134,8 +133,8 @@
                 </div>
             </div>
             
-            <div class="alert alert-info d-flex align-items-center mt-3 shadow-sm border-0" role="alert">
-                <i class="bi bi-info-circle-fill fs-4 me-3"></i>
+            <div class="alert alert-info d-flex align-items-start mt-3 shadow-sm border-0" role="alert">
+                <i class="bi bi-info-circle-fill fs-5 me-3"></i>
                 <div class="small lh-sm">
                     Pesanan akan langsung masuk ke dapur setelah Anda menekan tombol pembayaran.
                 </div>

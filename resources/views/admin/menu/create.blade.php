@@ -13,6 +13,7 @@
                 @csrf
                 
                 <div class="row">
+                    {{-- Left Column: Basic Info --}}
                     <div class="col-md-6">
                         <div class="mb-3">
                             <label for="nama_menu" class="form-label">Nama Menu <span class="text-danger">*</span></label>
@@ -56,6 +57,7 @@
                         </div>
                     </div>
 
+                    {{-- Right Column: Details & Media --}}
                     <div class="col-md-6">
                         <div class="mb-3">
                             <label for="deskripsi" class="form-label">Deskripsi (Opsional)</label>
@@ -85,8 +87,11 @@
 
                 <hr class="my-4">
                 
-                <button type="submit" class="btn btn-primary me-2">Simpan Menu Baru</button>
-                <a href="{{ route('menu.index') }}" class="btn btn-secondary">Batal</a>
+                {{-- Action Buttons --}}
+                <div class="d-flex justify-content-start">
+                    <button type="submit" class="btn btn-primary me-2">Simpan Menu Baru</button>
+                    <a href="{{ route('menu.index') }}" class="btn btn-secondary">Batal</a>
+                </div>
 
             </form>
         </div>

@@ -1,57 +1,63 @@
 @extends('layouts.admin')
 
-@section('title', 'Dashboard Admin - Tikako')
+@section('title', 'Admin Dashboard - Tikako')
 
 @section('content')
 
-    <h1 class="display-5 fw-bold mb-4">Dashboard Utama</h1>
-    <p class="text-muted">Ringkasan operasional dan kinerja Tikako saat ini.</p>
+    {{-- Page Header --}}
+    <h1 class="display-5 fw-bold mb-4">Main Dashboard</h1>
+    <p class="text-muted">Operational summary and current performance overview.</p>
 
-    {{-- BAGIAN STATISTIK (KPI) --}}
+    {{-- STATISTICS SECTION (KPI) --}}
     <div class="row g-3 mb-5">
         
+        {{-- Total Orders --}}
         <div class="col-md-3">
             <div class="card shadow-sm border-0 h-100">
                 <div class="card-body">
-                    <h5 class="card-title text-uppercase small text-muted">Total Pesanan</h5>
+                    <h5 class="card-title text-uppercase small text-muted">Total Orders</h5>
                     <div class="display-4 fw-bold text-primary">{{ $totalOrders }}</div>
                 </div>
             </div>
         </div>
 
+        {{-- Awaiting Kitchen --}}
         <div class="col-md-3">
             <div class="card shadow-sm border-0 h-100">
                 <div class="card-body">
-                    <h5 class="card-title text-uppercase small text-muted">Menunggu Dapur</h5>
+                    <h5 class="card-title text-uppercase small text-muted">Awaiting Kitchen</h5>
                     <div class="display-4 fw-bold text-warning">{{ $ordersAwaiting }}</div>
                 </div>
             </div>
         </div>
 
+        {{-- Net Revenue --}}
         <div class="col-md-3">
             <div class="card shadow-sm border-0 h-100">
                 <div class="card-body">
-                    <h5 class="card-title text-uppercase small text-muted">Pendapatan Bersih</h5>
+                    <h5 class="card-title text-uppercase small text-muted">Net Revenue</h5>
                     <div class="display-6 fw-bold text-success">Rp {{ number_format($totalRevenue, 0, ',', '.') }}</div>
                 </div>
             </div>
         </div>
-        
+
+        {{-- Completion Rate --}}
         <div class="col-md-3">
-            <div class="card shadow-sm border-0 h-100">
+            <div class="card shadow-sm">
                 <div class="card-body">
-                    <h5 class="card-title text-uppercase small text-muted">Efisiensi Dapur</h5>
-                    <div class="display-4 fw-bold text-info">98%</div>
+                    <h5 class="card-title text-uppercase small text-muted">Completion Rate</h5>
+                    <div class="display-4 fw-bold text-info">{{ $efficiency }}%</div>
+                    <small class="text-muted" style="font-size: 0.7rem;">Completed / Total Orders</small>
                 </div>
             </div>
         </div>
 
     </div>
 
-    {{-- BAGIAN TABEL MONITORING --}}
+    {{-- LIVE MONITORING TABLE --}}
     <div class="card shadow-sm mt-5">
         <div class="card-header bg-white fw-bold border-bottom-0 py-3 d-flex justify-content-between align-items-center">
-            <span><i class="bi bi-activity me-2"></i>Aktivitas Pesanan Terbaru (Live)</span>
+            <span><i class="bi bi-activity me-2"></i>Recent Order Activity (Live)</span>
             <span class="badge bg-danger animate-pulse">Live Monitoring</span>
         </div>
         <div class="card-body p-0">
@@ -59,21 +65,23 @@
                 <thead class="table-light">
                     <tr>
                         <th>ID</th>
-                        <th>Pemesan</th> {{-- Tambah kolom ini --}}
-                        <th>Meja</th>
-                        <th>Detail Item</th>
+                        <th>Customer</th>
+                        <th>Table</th>
+                        <th>Items</th>
                         <th>Total</th>
                         <th>Status</th>
-                        <th>Waktu</th>
+                        <th>Time</th>
                     </tr>
                 </thead>
                 
-                {{-- Tambahkan ID untuk Auto Refresh --}}
+                {{-- ID for Auto Refresh Logic --}}
                 <tbody id="dashboard-data">
                     @forelse ($latestOrders as $order)
                         @php
                             $statusClass = '';
                             $badgeColor = 'bg-secondary';
+                            
+                            // Map database status to badge colors
                             if ($order->status == 'Diterima') $badgeColor = 'bg-warning text-dark';
                             elseif ($order->status == 'Sedang Dimasak') $badgeColor = 'bg-primary';
                             elseif ($order->status == 'Selesai') $badgeColor = 'bg-success';
@@ -81,14 +89,13 @@
                         <tr>
                             <td>#{{ $order->id }}</td>
                             
-                            {{-- Tampilkan Nama Pemesan --}}
                             <td class="fw-bold text-primary">
-                                {{ $order->user->name ?? 'Tamu' }}
+                                {{ $order->user->name ?? 'Guest' }}
                             </td>
 
                             <td class="fw-bold text-center">{{ $order->nomor_meja }}</td>
                             
-                            {{-- Tampilan Item yang Lebih Rapi (Mirip Pesanan Dapur) --}}
+                            {{-- Item Details --}}
                             <td>
                                 <div class="d-flex flex-column gap-1">
                                     @foreach ($order->details as $detail)
@@ -109,45 +116,60 @@
                             <td class="small text-muted">{{ $order->created_at->diffForHumans() }}</td>
                         </tr>
                     @empty
-                    <tr>
-                        <td colspan="7" class="text-center text-muted py-4">
-                            Tidak ada pesanan aktif saat ini.
-                        </td>
-                    </tr>
+                        <tr>
+                            <td colspan="7" class="text-center text-muted py-4">
+                                No active orders at the moment.
+                            </td>
+                        </tr>
                     @endforelse
                 </tbody>
             </table>
         </div>
         <div class="card-footer bg-white text-center py-3">
-            <a href="{{ route('admin.orders.index') }}" class="btn btn-sm btn-outline-primary">Lihat Semua Pesanan</a>
+            <a href="{{ route('admin.orders.index') }}" class="btn btn-sm btn-outline-primary">View All Orders</a>
         </div>
     </div>
 
-    {{-- Script Auto Refresh Dashboard (Sama seperti Pesanan Dapur) --}}
+    {{-- Auto Refresh Script --}}
     <script>
         document.addEventListener('DOMContentLoaded', function () {
-            setInterval(function () {
+            
+            // FIX: Cek apakah halaman berjalan di lingkungan Blob/Preview
+            // Jika ya, hentikan auto-refresh untuk mencegah error console "Failed to fetch"
+            if (window.location.protocol === 'blob:' || window.location.protocol === 'about:') {
+                console.warn('Auto-refresh disabled in preview mode to prevent fetch errors.');
+                return;
+            }
+
+            // Refresh dashboard data every 15 seconds
+            const intervalId = setInterval(function () {
                 updateDashboard();
-            }, 15000); // Refresh setiap 15 detik
+            }, 15000); 
 
             function updateDashboard() {
                 fetch(window.location.href)
-                    .then(response => response.text())
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Network response was not ok');
+                        }
+                        return response.text();
+                    })
                     .then(html => {
                         var parser = new DOMParser();
                         var doc = parser.parseFromString(html, 'text/html');
                         
-                        // Update Tabel
+                        // Update Table Body
                         var newTable = doc.getElementById('dashboard-data').innerHTML;
-                        document.getElementById('dashboard-data').innerHTML = newTable;
-
-                        // Update Kartu Statistik (Opsional: Biar angka di atas ikut berubah)
-                        // Kita asumsikan class display-4 cukup unik, atau bisa kasih ID spesifik nanti
-                        // Untuk sekarang tabelnya dulu yang penting.
-                        
-                        console.log('Dashboard updated: ' + new Date().toLocaleTimeString());
+                        if(newTable) {
+                            document.getElementById('dashboard-data').innerHTML = newTable;
+                            console.log('Dashboard updated: ' + new Date().toLocaleTimeString());
+                        }
                     })
-                    .catch(error => console.error('Error refreshing dashboard:', error));
+                    .catch(error => {
+                        console.error('Dashboard refresh paused (Error):', error);
+                        // Optional: Stop polling on error to prevent spamming
+                        // clearInterval(intervalId);
+                    });
             }
         });
     </script>

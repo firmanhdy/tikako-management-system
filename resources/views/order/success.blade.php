@@ -1,6 +1,6 @@
 @extends('layouts.pelanggan')
 
-@section('title', 'Pesanan Berhasil - Tikako')
+@section('title', 'Order Received - Tikako')
 
 @section('content')
 
@@ -8,47 +8,47 @@
     
     <div class="card border-0 shadow-lg rounded-4 overflow-hidden text-center p-4 position-relative" style="max-width: 450px; width: 100%;">
         
-        {{-- Hiasan Garis Atas --}}
+        {{-- Top Accent Line --}}
         <div class="position-absolute top-0 start-0 w-100 bg-success" style="height: 6px;"></div>
 
         <div class="card-body">
             
-            {{-- Ikon Animasi --}}
+            {{-- Animated Success Icon --}}
             <div class="mb-3 mt-2">
                 <div class="success-icon-wrapper">
                     <i class="bi bi-check-circle-fill text-success" style="font-size: 5rem;"></i>
                 </div>
             </div>
 
-            <h2 class="fw-bold text-dark mb-2">Pesanan Diterima!</h2>
+            <h2 class="fw-bold text-dark mb-2">Order Received!</h2>
             <p class="text-muted mb-4 small">
-                Terima kasih! Pesanan Anda telah masuk ke dapur kami dan sedang disiapkan.
+                Thank you! Your order has been sent to our kitchen and is currently being prepared.
             </p>
 
-            {{-- Box Nomor Pesanan (Fokus Utama) --}}
+            {{-- Order Number Box (Primary Focus) --}}
             <div class="bg-light border border-secondary-subtle rounded-3 p-4 mb-4">
                 <div class="text-uppercase text-secondary fw-bold" style="font-size: 0.75rem; letter-spacing: 1px;">
-                    Nomor Pesanan Anda
+                    Your Order Number
                 </div>
                 <div class="display-3 fw-bold text-primary mt-1 mb-1">
                     #{{ $orderId }}
                 </div>
                 <div class="badge bg-warning text-dark rounded-pill px-3">
-                    <i class="bi bi-hourglass-split me-1"></i> Menunggu Pembayaran
+                    <i class="bi bi-hourglass-split me-1"></i> Awaiting Payment
                 </div>
             </div>
 
             <p class="small text-secondary mb-4">
-                Silakan tunjukkan nomor ini ke kasir untuk melakukan pembayaran.
+                Please show this number to the cashier for payment.
             </p>
 
-            {{-- Tombol Aksi --}}
+            {{-- Action Buttons --}}
             <div class="d-grid gap-2">
                 <a href="{{ route('orders.myOrders') }}" class="btn btn-primary btn-lg rounded-pill fw-bold shadow-sm">
-                    <i class="bi bi-receipt me-2"></i> Lihat Status Pesanan
+                    <i class="bi bi-receipt me-2"></i> View Order Status
                 </a>
                 <a href="{{ route('menu.indexPage') }}" class="btn btn-outline-secondary rounded-pill fw-bold">
-                    Kembali ke Menu
+                    Back to Menu
                 </a>
             </div>
 
@@ -57,7 +57,7 @@
 
 </div>
 
-{{-- CSS Animasi Pop-Up --}}
+{{-- CSS Pop-Up Animation --}}
 <style>
     .success-icon-wrapper {
         animation: popSuccess 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;

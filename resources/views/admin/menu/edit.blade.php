@@ -14,6 +14,7 @@
                 @method('PUT') 
 
                 <div class="row">
+                    {{-- Left Column: Basic Info --}}
                     <div class="col-md-6">
                         <div class="mb-3">
                             <label for="nama_menu" class="form-label">Nama Menu <span class="text-danger">*</span></label>
@@ -58,6 +59,7 @@
                         </div>
                     </div>
 
+                    {{-- Right Column: Details & Media --}}
                     <div class="col-md-6">
                         <div class="mb-3">
                             <label for="deskripsi" class="form-label">Deskripsi (Opsional)</label>
@@ -67,7 +69,7 @@
                         <div class="mb-3">
                             <label class="form-label">Foto Saat Ini:</label><br>
                             @if ($menu->foto)
-                                <img src="{{ asset('storage/' . $menu->foto) }}" alt="Foto Lama" class="img-thumbnail" style="max-width: 150px;">
+                                <img src="{{ asset('storage/' . $menu->foto) }}" alt="Current Photo" class="img-thumbnail" style="max-width: 150px;">
                             @else
                                 <span class="text-muted small">Tidak ada foto lama.</span>
                             @endif
@@ -96,8 +98,11 @@
 
                 <hr class="my-4">
                 
-                <button type="submit" class="btn btn-success me-2">Simpan Perubahan</button>
-                <a href="{{ route('menu.index') }}" class="btn btn-secondary">Batal</a>
+                {{-- Action Buttons --}}
+                <div class="d-flex justify-content-start">
+                    <button type="submit" class="btn btn-success me-2">Simpan Perubahan</button>
+                    <a href="{{ route('menu.index') }}" class="btn btn-secondary">Batal</a>
+                </div>
 
             </form>
         </div>

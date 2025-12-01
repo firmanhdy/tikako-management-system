@@ -1,35 +1,39 @@
 @extends('layouts.admin')
 
-@section('title', 'Manajemen Pesanan - Tikako')
+@section('title', 'Order Management - Tikako')
 
 @section('content')
     
+    {{-- Real-time Order Monitor Component (Vue/JS) --}}
     <order-monitor></order-monitor> 
     
-    <h1 class="display-6 fw-bold mb-4">Manajemen Pesanan</h1>
-    <p class="text-muted">Daftar semua pesanan yang masuk. Pesanan terbaru ada di atas.</p>
+    {{-- Page Header --}}
+    <h1 class="display-6 fw-bold mb-4">Order Management</h1>
+    <p class="text-muted">List of all incoming orders. Newest orders appear at the top.</p>
 
+    {{-- Orders Table --}}
     <div class="card shadow-sm">
         <div class="card-body p-0">
             <table class="table table-striped table-hover mb-0"> 
                 <thead>
                     <tr>
-                        <th>ID Pesanan</th>
-                        <th>Pemesan</th> <th>Nomor Meja</th>
+                        <th>ID</th>
+                        <th>Customer</th> 
+                        <th>Table</th>
                         <th>Status</th>
-                        <th>Total Harga</th>
-                        <th>Waktu Pesan</th>
-                        <th>Detail Item</th>
-                        <th>Aksi</th>
+                        <th>Total</th>
+                        <th>Time</th>
+                        <th style="width: 25%;">Details</th>
+                        <th style="width: 20%;">Actions</th>
                     </tr>
                 </thead>
-                {{-- ID untuk Auto Refresh --}}
                 <tbody id="order-data">
-                    @forelse ($data_pesanan as $order)
+                    @forelse ($orders as $order) {{-- Variable changed to $orders to match Controller --}}
                         @php
                             $statusClass = ''; 
                             $badgeColor = 'bg-secondary';
 
+                            // Status Color Logic (Based on KPI)
                             if ($order->status == 'Diterima') {
                                 $statusClass = 'status-diterima'; 
                                 $badgeColor = 'bg-warning text-dark';
@@ -48,78 +52,102 @@
                         <tr class="{{ $statusClass }} align-middle">
                             <td>#{{ $order->id }}</td>
                             
-                            <td>
-                                @if($order->user)
-                                    <div class="fw-bold">{{ $order->user->name }}</div>
-                                @else
-                                    <span class="text-muted small fst-italic">Tamu</span>
-                                @endif
-                            </td> 
+                            <td class="fw-bold">{{ $order->user->name ?? 'Guest' }}</td>
                             
                             <td class="text-center fw-bold">{{ $order->nomor_meja }}</td>
                             
-                            <td><span class="badge {{ $badgeColor }} rounded-pill">{{ $order->status }}</span></td> 
-                            
-                            <td class="fw-bold text-success">Rp {{ number_format($order->total_price, 0, ',', '.') }}</td>
-                            
                             <td>
-                                <div class="small text-muted">
-                                    <i class="bi bi-clock"></i> {{ $order->created_at->format('H:i') }}
-                                </div>
-                                <div class="small text-muted fst-italic">
-                                    {{ $order->created_at->diffForHumans() }}
-                                </div>
+                                <span class="badge {{ $badgeColor }} rounded-pill">
+                                    {{ $order->status }}
+                                </span>
+                            </td> 
+                            
+                            <td class="fw-bold text-success">
+                                Rp {{ number_format($order->total_price, 0, ',', '.') }}
                             </td>
                             
-                            {{-- Tampilan Detail Menu yang Rapi --}}
-                            <td style="min-width: 250px;">
-                                <div class="d-flex flex-column gap-2">
+                            <td>
+                                <div class="small fw-bold">{{ $order->created_at->format('H:i') }}</div>
+                                <div class="small text-muted">{{ $order->created_at->diffForHumans() }}</div>
+                            </td>
+                            
+                            {{-- Column: Details & Notes --}}
+                            <td>
+                                <ul class="list-unstyled small mb-0">
                                     @foreach ($order->details as $detail)
-                                        <div class="d-flex align-items-center p-1 border rounded bg-white shadow-sm">
-                                            <div class="badge bg-dark text-white me-2 p-2 rounded-circle" style="width: 30px; height: 30px; display:flex; align-items:center; justify-content:center;">
-                                                {{ $detail->quantity }}
-                                            </div>
-                                            <div class="lh-1">
-                                                <div class="fw-bold text-dark" style="font-size: 0.9rem;">
-                                                    {{ $detail->menu->nama_menu }}
+                                        <li class="mb-1">
+                                            <strong>{{ $detail->quantity }}x</strong> {{ $detail->menu->nama_menu }}
+                                            
+                                            {{-- Display Item Note if exists --}}
+                                            @if($detail->note)
+                                                <div class="text-danger fst-italic" style="font-size: 0.85em;">
+                                                    Note: {{ $detail->note }}
                                                 </div>
-                                                <small class="text-muted">
-                                                    @ Rp {{ number_format($detail->price, 0, ',', '.') }}
-                                                </small>
-                                            </div>
-                                        </div>
+                                            @endif
+                                        </li>
                                     @endforeach
-                                </div>
+                                </ul>
+                                
+                                {{-- Display Order Note if exists --}}
+                                @if($order->note)
+                                    <div class="alert alert-warning py-1 px-2 mt-1 mb-0" style="font-size: 0.85em;">
+                                        <i class="bi bi-info-circle me-1"></i> <strong>Note:</strong> {{ $order->note }}
+                                    </div>
+                                @endif
                             </td>
 
-                            {{-- Bagian Tombol Aksi --}}
+                            {{-- Column: Actions (Update Status + Print) --}}
                             <td>
-                                <form action="{{ route('admin.orders.updateStatus', $order) }}" method="POST" class="mb-2">
-                                    @csrf
-                                    <div class="input-group input-group-sm">
-                                        <select name="status" class="form-select form-select-sm" style="max-width: 110px;">
-                                            <option value="Diterima" {{ $order->status == 'Diterima' ? 'selected' : '' }}>Diterima</option>
-                                            <option value="Sedang Dimasak" {{ $order->status == 'Sedang Dimasak' ? 'selected' : '' }}>Dimasak</option>
-                                            <option value="Selesai" {{ $order->status == 'Selesai' ? 'selected' : '' }}>Selesai</option>
-                                            <option value="Dibatalkan" {{ $order->status == 'Dibatalkan' ? 'selected' : '' }}>Batal</option>
-                                        </select>
-                                        <button type="submit" class="btn btn-outline-primary"><i class="bi bi-check-lg"></i></button> 
-                                    </div>
-                                </form>
-                                
-                                <div class="d-flex gap-1">
-                                    {{-- Tombol Print Kasir (MEMANGGIL POPUP MODAL) --}}
-                                    <button type="button" 
-                                            class="btn btn-sm btn-light border shadow-sm flex-fill" 
-                                            title="Struk Kasir"
-                                            onclick="showPaymentModal({{ $order->id }}, {{ $order->total_price }})">
-                                        <i class="bi bi-receipt"></i> Kasir
-                                    </button>
+                                <div class="d-flex flex-column gap-2">
                                     
-                                    {{-- Tombol Print Dapur (Langsung Print) --}}
-                                    <a href="{{ route('admin.orders.print', ['order' => $order->id, 'type' => 'dapur']) }}" target="_blank" class="btn btn-sm btn-dark shadow-sm flex-fill" title="Tiket Dapur">
-                                        <i class="bi bi-egg-fried"></i> Dapur
-                                    </a>
+                                    {{-- 1. Update Status Dropdown --}}
+                                    <div class="dropdown w-100">
+                                        <button class="btn btn-sm btn-outline-primary dropdown-toggle w-100" type="button" data-bs-toggle="dropdown">
+                                            Update Status
+                                        </button>
+                                        <ul class="dropdown-menu">
+                                            <li>
+                                                <form action="{{ route('admin.orders.updateStatus', $order) }}" method="POST">
+                                                    @csrf <input type="hidden" name="status" value="Diterima">
+                                                    <button class="dropdown-item">Diterima (Received)</button>
+                                                </form>
+                                            </li>
+                                            <li>
+                                                <form action="{{ route('admin.orders.updateStatus', $order) }}" method="POST">
+                                                    @csrf <input type="hidden" name="status" value="Sedang Dimasak">
+                                                    <button class="dropdown-item">Sedang Dimasak (Cooking)</button>
+                                                </form>
+                                            </li>
+                                            <li>
+                                                <form action="{{ route('admin.orders.updateStatus', $order) }}" method="POST">
+                                                    @csrf <input type="hidden" name="status" value="Selesai">
+                                                    <button class="dropdown-item">Selesai (Completed)</button>
+                                                </form>
+                                            </li>
+                                            <li><hr class="dropdown-divider"></li>
+                                            <li>
+                                                <form action="{{ route('admin.orders.updateStatus', $order) }}" method="POST">
+                                                    @csrf <input type="hidden" name="status" value="Dibatalkan">
+                                                    <button class="dropdown-item text-danger">Dibatalkan (Cancelled)</button>
+                                                </form>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                    
+                                    {{-- 2. Print Buttons --}}
+                                    <div class="d-flex gap-1">
+                                        {{-- Cashier Print (Modal Trigger) --}}
+                                        <button type="button" 
+                                                class="btn btn-sm btn-light border shadow-sm flex-fill" 
+                                                onclick="showPaymentModal({{ $order->id }}, {{ $order->total_price }})">
+                                            <i class="bi bi-receipt"></i> Cashier
+                                        </button>
+                                        
+                                        {{-- Kitchen Print (Direct Link) --}}
+                                        <a href="{{ route('admin.orders.print', ['order' => $order->id, 'type' => 'dapur']) }}" target="_blank" class="btn btn-sm btn-dark shadow-sm flex-fill">
+                                            <i class="bi bi-egg-fried"></i> Kitchen
+                                        </a>
+                                    </div>
                                 </div>
                             </td>
                         </tr>
@@ -127,130 +155,100 @@
                         <tr>
                             <td colspan="8" class="text-center py-5 text-muted">
                                 <i class="bi bi-inbox fs-1 d-block mb-3"></i>
-                                Belum ada pesanan yang masuk hari ini.
+                                No orders received today.
                             </td>
                         </tr>
                     @endforelse
                 </tbody>
             </table>
         </div>
-    </div>
-
-    {{-- Tombol Pagination --}}
-    <div class="d-flex justify-content-end mt-3">
-        {{ $data_pesanan->links() }}
+        
+        {{-- Pagination --}}
+        <div class="card-footer bg-white py-3">
+            <div class="d-flex justify-content-end">
+                {{ $orders->links() }}
+            </div>
+        </div>
     </div>
 
     {{-- ================================================= --}}
-    {{-- MODAL POPUP HITUNG PEMBAYARAN --}}
+    {{-- PAYMENT CALCULATOR MODAL                          --}}
     {{-- ================================================= --}}
     <div class="modal fade" id="paymentModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-sm modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header bg-light py-2">
-                    <h6 class="modal-title fw-bold">Hitung Pembayaran</h6>
+                    <h6 class="modal-title fw-bold">Payment Calculator</h6>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    {{-- Form Input --}}
                     <div class="mb-2">
-                        <label class="small text-muted">Total Tagihan</label>
+                        <label class="small text-muted">Total Bill</label>
                         <div class="fs-4 fw-bold text-primary" id="modalTotalDisplay">Rp 0</div>
                         <input type="hidden" id="modalTotalValue">
                         <input type="hidden" id="modalOrderId">
                     </div>
-                    
                     <div class="mb-3">
-                        <label class="small fw-bold">Uang Diterima (Tunai)</label>
+                        <label class="small fw-bold">Cash Received</label>
                         <input type="number" class="form-control form-control-lg" id="inputBayar" placeholder="0" oninput="hitungKembalian()">
                     </div>
-    
                     <div class="d-flex justify-content-between border-top pt-2">
-                        <span class="fw-bold">Kembali:</span>
+                        <span class="fw-bold">Change:</span>
                         <span class="fw-bold text-success" id="displayKembalian">Rp 0</span>
                     </div>
                 </div>
                 <div class="modal-footer p-2">
                     <button type="button" class="btn btn-primary w-100" onclick="prosesCetak()">
-                        <i class="bi bi-printer-fill me-1"></i> Cetak Struk
+                        <i class="bi bi-printer-fill me-1"></i> Print Receipt
                     </button>
                 </div>
             </div>
         </div>
     </div>
 
-
-    {{-- ================================================= --}}
-    {{-- SCRIPT JAVASCRIPT --}}
-    {{-- ================================================= --}}
+    @push('scripts')
     <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            
-            // ----------------------------------------
-            // 1. LOGIKA AUTO REFRESH TABEL (15 Detik)
-            // ----------------------------------------
-            setInterval(function () {
-                updateOrderTable();
-            }, 15000); 
-
-            function updateOrderTable() {
-                var url = window.location.href;
-                fetch(url)
-                    .then(response => response.text())
-                    .then(html => {
-                        var parser = new DOMParser();
-                        var doc = parser.parseFromString(html, 'text/html');
-                        var newTbody = doc.getElementById('order-data').innerHTML;
-                        document.getElementById('order-data').innerHTML = newTbody;
-                        console.log('Data pesanan diperbarui: ' + new Date().toLocaleTimeString());
-                    })
-                    .catch(error => console.error('Gagal update data:', error));
-            }
-        });
-
-        // ----------------------------------------
-        // 2. LOGIKA POPUP KASIR (Global Function)
-        // ----------------------------------------
-        
-        // Tampilkan Modal
+        /**
+         * Show the Payment Calculator Modal.
+         */
         function showPaymentModal(orderId, totalPrice) {
             document.getElementById('modalOrderId').value = orderId;
             document.getElementById('modalTotalValue').value = totalPrice;
-            
-            // Format Rupiah
             document.getElementById('modalTotalDisplay').innerText = 'Rp ' + new Intl.NumberFormat('id-ID').format(totalPrice);
-            
-            // Reset form
             document.getElementById('inputBayar').value = ''; 
             document.getElementById('displayKembalian').innerText = 'Rp 0';
-            document.getElementById('displayKembalian').classList.remove('text-danger');
-            document.getElementById('displayKembalian').classList.add('text-success');
             
             var myModal = new bootstrap.Modal(document.getElementById('paymentModal'));
             myModal.show();
-
+            
+            // Auto-focus input field
             setTimeout(() => { document.getElementById('inputBayar').focus(); }, 500);
         }
 
-        // Hitung Kembalian
+        /**
+         * Calculate Change (Kembalian) dynamically.
+         */
         function hitungKembalian() {
             let total = parseInt(document.getElementById('modalTotalValue').value);
             let bayar = parseInt(document.getElementById('inputBayar').value) || 0;
-            
             let kembali = bayar - total;
-
+            
+            let displayEl = document.getElementById('displayKembalian');
+            
             if (kembali < 0) {
-                document.getElementById('displayKembalian').innerText = '- Rp ' + new Intl.NumberFormat('id-ID').format(Math.abs(kembali)) + ' (Kurang)';
-                document.getElementById('displayKembalian').classList.add('text-danger');
-                document.getElementById('displayKembalian').classList.remove('text-success');
+                displayEl.innerText = '- Rp ' + new Intl.NumberFormat('id-ID').format(Math.abs(kembali)) + ' (Insufficient)';
+                displayEl.classList.add('text-danger');
+                displayEl.classList.remove('text-success');
             } else {
-                document.getElementById('displayKembalian').innerText = 'Rp ' + new Intl.NumberFormat('id-ID').format(kembali);
-                document.getElementById('displayKembalian').classList.remove('text-danger');
-                document.getElementById('displayKembalian').classList.add('text-success');
+                displayEl.innerText = 'Rp ' + new Intl.NumberFormat('id-ID').format(kembali);
+                displayEl.classList.remove('text-danger');
+                displayEl.classList.add('text-success');
             }
         }
 
-        // Proses Cetak
+        /**
+         * Process Print Request (Open new tab).
+         */
         function prosesCetak() {
             let orderId = document.getElementById('modalOrderId').value;
             let bayar = document.getElementById('inputBayar').value;
@@ -258,18 +256,15 @@
             let kembali = bayar - total;
 
             if (!bayar || bayar < 1) {
-                bayar = total; // Default uang pas
+                bayar = total; 
                 kembali = 0;
             }
 
+            // Open print route in new tab
             let url = `/admin/orders/${orderId}/print/kasir?bayar=${bayar}&kembali=${kembali}`;
-            
             window.open(url, '_blank');
-            
-            // Opsional: Tutup modal setelah print
-            // var modalEl = document.getElementById('paymentModal');
-            // var modal = bootstrap.Modal.getInstance(modalEl);
-            // modal.hide();
         }
     </script>
+    @endpush
+
 @endsection

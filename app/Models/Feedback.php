@@ -11,11 +11,18 @@ class Feedback extends Model
 
     protected $table = 'feedbacks';
 
-
     protected $fillable = [
         'name',
         'email',
         'rating',
         'message',
+    ];
+
+    /**
+     * The attributes that should be cast.
+     * Ensure rating is always cast to integer when retrieved.
+     */
+    protected $casts = [
+        'rating' => 'integer',
     ];
 }

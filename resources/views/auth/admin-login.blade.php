@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="id">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,7 +9,7 @@
     
     <style>
         body {
-            background-color: #212529; /* Latar Gelap */
+            background-color: #212529; /* Dark Background */
             height: 100vh;
             display: flex;
             align-items: center;
@@ -25,7 +25,7 @@
             box-shadow: 0 10px 30px rgba(0,0,0,0.5);
         }
         .login-header {
-            background: #ffc107; /* Warna Emas Tikako */
+            background: #ffc107; /* Tikako Gold Color */
             padding: 30px 20px;
             text-align: center;
         }
@@ -59,34 +59,58 @@
         </div>
         
         <div class="login-body">
-            <form method="POST" action="{{ url('/admin/login') }}">
+            
+            {{-- Display Flash Messages (e.g., from adminLogout) --}}
+            @if (session('success'))
+                <div class="alert alert-success small mb-3">{{ session('success') }}</div>
+            @endif
+
+            {{-- Login Form --}}
+            <form method="POST" action="{{ route('admin.login') }}">
                 @csrf
                 
+                {{-- Email Field --}}
                 <div class="mb-3">
-                    <label class="form-label small fw-bold text-muted">Email Admin</label>
+                    <label class="form-label small fw-bold text-muted">Admin Email</label>
                     <div class="input-group">
                         <span class="input-group-text bg-light"><i class="bi bi-person-badge"></i></span>
-                        <input type="email" name="email" class="form-control" placeholder="admin@tikako.com" required autofocus>
+                        <input type="email" 
+                               name="email" 
+                               class="form-control @error('email') is-invalid @enderror" 
+                               placeholder="admin@tikako.com" 
+                               value="{{ old('email') }}"
+                               required 
+                               autofocus>
+                        @error('email')
+                            <div class="invalid-feedback d-block">{{ $message }}</div>
+                        @enderror
                     </div>
                 </div>
 
+                {{-- Password Field --}}
                 <div class="mb-4">
                     <label class="form-label small fw-bold text-muted">Password</label>
                     <div class="input-group">
                         <span class="input-group-text bg-light"><i class="bi bi-key"></i></span>
-                        <input type="password" name="password" class="form-control" placeholder="••••••••" required>
+                        <input type="password" 
+                               name="password" 
+                               class="form-control" 
+                               placeholder="••••••••" 
+                               required>
                     </div>
+                    {{-- Note: General password error handled by email validation logic in Controller --}}
                 </div>
 
                 <div class="d-grid">
                     <button type="submit" class="btn btn-dark-custom rounded-pill">
-                        MASUK SYSTEM
+                        LOGIN TO SYSTEM
                     </button>
                 </div>
                 
+                {{-- Return to Public Site Link --}}
                 <div class="text-center mt-4">
                     <a href="/" class="text-decoration-none small text-muted">
-                        <i class="bi bi-arrow-left me-1"></i> Kembali ke Website
+                        <i class="bi bi-arrow-left me-1"></i> Back to Website
                     </a>
                 </div>
             </form>

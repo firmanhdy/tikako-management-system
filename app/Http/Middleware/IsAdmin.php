@@ -9,17 +9,23 @@ use Symfony\Component\HttpFoundation\Response;
 
 class IsAdmin
 {
+    /**
+     * Handle an incoming request.
+     *
+     * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
+     */
     public function handle(Request $request, Closure $next): Response
     {
-        if (Auth::check()) {
-            
-            if (Auth::user()->role === 'admin') {
-                return $next($request); 
-            }
-            
-            return redirect('/')->with('error', 'Akses Ditolak. Anda tidak memiliki izin Admin.');
+        // 1. Check if user is authenticated
+        if (!Auth::check()) {
+            return redirect()->route('admin.login');
         }
-        
-        return redirect('/admin/login');
+
+        // 2. Check Authorization (Admin Role)
+        if (Auth::user()->role !== 'admin') {
+            return redirect('/')->with('error', 'Access Denied. Administrator privileges required.');
+        }
+
+        return $next($request);
     }
 }

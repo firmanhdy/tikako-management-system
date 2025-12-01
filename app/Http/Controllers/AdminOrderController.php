@@ -2,248 +2,243 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Controller;
+use App\Models\Feedback;
+use App\Models\Order;
+use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use App\Models\Order; 
-use App\Models\User; 
-use App\Models\Feedback;
+use Illuminate\Support\Facades\Hash;
 use SimpleSoftwareIO\QrCode\Facades\QrCode;
 
 class AdminOrderController extends Controller
 {
+    /**
+     * Display the admin dashboard with summary statistics.
+     */
     public function dashboard()
     {
         $totalOrders = Order::count();
         $ordersAwaiting = Order::where('status', 'Diterima')->count();
+        $completedOrdersCount = Order::where('status', 'Selesai')->count();
         $totalRevenue = Order::where('status', 'Selesai')->sum('total_price');
-        $latestOrders = Order::with(['details.menu', 'user']) 
-                             ->where('status', '!=', 'Selesai') 
-                             ->orderBy('created_at', 'desc')
-                             ->take(5) 
-                             ->get();        
-        return view('admin.dashboard', [
-            'totalOrders' => $totalOrders,
-            'ordersAwaiting' => $ordersAwaiting,
-            'totalRevenue' => $totalRevenue,
-            'latestOrders' => $latestOrders,
-        ]);
-    }
-    
-    public function index()
-    {
-        $data_pesanan = Order::with(['details.menu', 'user']) 
-                             ->orderBy('created_at', 'desc')
-                             ->paginate(10);
-        return view('admin.orders.index', [
-            'data_pesanan' => $data_pesanan,
-        ]);
+
+        // Calculate efficiency percentage, handling division by zero
+        $efficiency = $totalOrders > 0 
+            ? round(($completedOrdersCount / $totalOrders) * 100) 
+            : 0;
+
+        $latestOrders = Order::with(['details.menu', 'user'])
+            ->where('status', '!=', 'Selesai')
+            ->latest()
+            ->take(5)
+            ->get();
+
+        return view('admin.dashboard', compact(
+            'totalOrders', 
+            'ordersAwaiting', 
+            'totalRevenue', 
+            'efficiency', 
+            'latestOrders'
+        ));
     }
 
+    /**
+     * Display a paginated list of all orders.
+     */
+    public function index()
+    {
+        $orders = Order::with(['details.menu', 'user'])
+            ->latest()
+            ->paginate(10);
+
+        return view('admin.orders.index', compact('orders'));
+    }
+
+    /**
+     * Manage customer data with search functionality.
+     */
     public function customersIndex(Request $request)
     {
         $search = $request->query('search');
-        $query = User::where('role', 'user');
-        if ($search) {
-            $query->where(function($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('email', 'like', "%{$search}%");
-            });
-        }
-        $customers = $query->orderBy('created_at', 'desc')->paginate(10);
-        $customers->appends(['search' => $search]);
-        return view('admin.customers', [
-            'customers' => $customers
-        ]);
+
+        $customers = User::where('role', 'user')
+            ->when($search, function ($query) use ($search) {
+                $query->where(function ($q) use ($search) {
+                    $q->where('name', 'like', "%{$search}%")
+                      ->orWhere('email', 'like', "%{$search}%");
+                });
+            })
+            ->latest()
+            ->paginate(10)
+            ->withQueryString();
+
+        return view('admin.customers', compact('customers'));
     }
+
+    /**
+     * Remove the specified customer from storage.
+     */
+    public function destroyCustomer(User $user)
+    {
+        // Prevent admins from deleting their own account accidentally
+        if (Auth::id() === $user->id) {
+            return back()->with('error', 'You cannot delete your own account.');
+        }
+
+        $user->delete();
+
+        return to_route('admin.customers.index')->with('success', 'Customer account deleted successfully.');
+    }
+
+    /**
+     * Display sales reports filtered by period.
+     */
     public function reportsIndex(Request $request)
     {
         $period = $request->query('period', '7_days');
         $search = $request->query('search');
-        $endDate = \Carbon\Carbon::now();       
-        if ($period == '30_days') {
-            $startDate = \Carbon\Carbon::now()->subDays(29);
-            $titleChart = 'Tren 30 Hari Terakhir';
-        } elseif ($period == 'this_month') {
-            $startDate = \Carbon\Carbon::now()->startOfMonth();
-            $titleChart = 'Tren Bulan Ini';
-        } else {
-            $startDate = \Carbon\Carbon::now()->subDays(6);
-            $titleChart = 'Tren 7 Hari Terakhir';
-        }
+        
+        // Retrieve date range based on selected period
+        $dateRange = $this->getDateRange($period);
+        $startDate = $dateRange['start'];
+        $endDate = $dateRange['end'];
+        $titleChart = $dateRange['title'];
+
+        // Base query for completed orders within the date range
         $query = Order::with(['details.menu', 'user'])
-                      ->where('status', 'Selesai')
-                      ->whereBetween('created_at', [
-                          $startDate->format('Y-m-d') . ' 00:00:00', 
-                          $endDate->format('Y-m-d') . ' 23:59:59'
-                      ]);
+            ->where('status', 'Selesai')
+            ->whereBetween('created_at', [$startDate, $endDate]);
+
+        // Apply search filter if present
         if ($search) {
-            $query->where(function($q) use ($search) {
-                $q->where('id', 'like', "%$search%")          // Cari ID
-                  ->orWhere('nomor_meja', 'like', "%$search%") // Cari No Meja
-                  ->orWhereHas('user', function($u) use ($search) { 
-                      $u->where('name', 'like', "%$search%"); // Cari Nama User
-                  });
+            $query->where(function ($q) use ($search) {
+                $q->where('id', 'like', "%{$search}%")
+                  ->orWhere('nomor_meja', 'like', "%{$search}%")
+                  ->orWhereHas('user', fn($u) => $u->where('name', 'like', "%{$search}%"));
             });
         }
 
-        $completedOrders = $query->orderBy('created_at', 'desc')->get();       
-        $revenueQuery = Order::where('status', 'Selesai')
-                             ->whereBetween('created_at', [
-                                 $startDate->format('Y-m-d') . ' 00:00:00', 
-                                 $endDate->format('Y-m-d') . ' 23:59:59'
-                             ]);
-        $totalRevenue = $revenueQuery->sum('total_price');
-        $rawChartData = $revenueQuery->selectRaw('DATE(created_at) as date, SUM(total_price) as total')
-                                     ->groupBy('date')
-                                     ->get();
-        $chartLabels = [];
-        $chartValues = [];
-        $daysDifference = $startDate->diffInDays($endDate);
-        for ($i = 0; $i <= $daysDifference; $i++) {
-            $dateCheck = $startDate->copy()->addDays($i)->format('Y-m-d');            
-            if ($period == '30_days' || $period == 'this_month') {
-                $dateLabel = $startDate->copy()->addDays($i)->format('d M'); 
-            } else {
-                $dateLabel = $startDate->copy()->addDays($i)->format('D, d M');
-            }
-            $salesOnThisDay = $rawChartData->firstWhere('date', $dateCheck);
-            $chartLabels[] = $dateLabel;
-            $chartValues[] = $salesOnThisDay ? $salesOnThisDay->total : 0;
-        }
-        return view('admin.reports', [
+        $completedOrders = $query->latest()->get();
+        $totalRevenue = $completedOrders->sum('total_price');
+
+        // Generate data for the chart visualization
+        $chartData = $this->generateChartData($startDate, $endDate, $period);
+
+        return view('admin.reports', array_merge([
             'completedOrders' => $completedOrders,
             'totalRevenue' => $totalRevenue,
-            'chartLabels' => $chartLabels, 
-            'chartValues' => $chartValues,
             'currentPeriod' => $period,
             'titleChart' => $titleChart
-        ]);
+        ], $chartData));
     }
 
+    /**
+     * Generate a printable report.
+     */
     public function printReport(Request $request)
     {
         $period = $request->query('period', '7_days');
-        $endDate = \Carbon\Carbon::now();       
-        $titlePeriod = ''; 
-        if ($period == '30_days') {
-            $startDate = \Carbon\Carbon::now()->subDays(29);
-            $titlePeriod = '30 Hari Terakhir';
-        } elseif ($period == 'this_month') {
-            $startDate = \Carbon\Carbon::now()->startOfMonth();
-            $titlePeriod = 'Bulan Ini (' . $startDate->format('F Y') . ')';
-        } elseif ($period == 'all') {
-            $startDate = \Carbon\Carbon::create(2000, 1, 1); 
-            $titlePeriod = 'Semua Riwayat Transaksi';
-        } else {
-            $startDate = \Carbon\Carbon::now()->subDays(6);
-            $titlePeriod = '7 Hari Terakhir';
-        }
+        $dateRange = $this->getDateRange($period);
+
         $completedOrders = Order::with(['details.menu', 'user'])
-                                ->where('status', 'Selesai')
-                                ->whereBetween('created_at', [
-                                    $startDate->format('Y-m-d') . ' 00:00:00', 
-                                    $endDate->format('Y-m-d') . ' 23:59:59'
-                                ])
-                                ->orderBy('created_at', 'desc')
-                                ->get();
-        $totalRevenue = $completedOrders->sum('total_price');
+            ->where('status', 'Selesai')
+            ->whereBetween('created_at', [$dateRange['start'], $dateRange['end']])
+            ->latest()
+            ->get();
+
         return view('admin.reports-print', [
             'completedOrders' => $completedOrders,
-            'totalRevenue' => $totalRevenue,
-            'titlePeriod' => $titlePeriod 
+            'totalRevenue' => $completedOrders->sum('total_price'),
+            'titlePeriod' => $dateRange['title']
         ]);
     }
 
-    public function destroyCustomer(User $user)
-    {
-        if (Auth::id() === $user->id) {
-            return redirect()->back()->with('error', 'Anda tidak dapat menghapus akun Anda sendiri.');
-        }
-        $user->delete();
-        return redirect()->route('admin.customers.index')->with('success', 'Akun pelanggan berhasil dihapus.');
-    }
-
+    /**
+     * Update the order status.
+     */
     public function updateStatus(Request $request, Order $order)
     {
-        $request->validate([
-            'status' => 'required|string|in:Diterima,Sedang Dimasak,Selesai,Dibatalkan' 
+        $validated = $request->validate([
+            'status' => 'required|in:Diterima,Sedang Dimasak,Selesai,Dibatalkan'
         ]);
-        $order->status = $request->status;
-        $order->save();
-        return redirect()->route('admin.orders.index')->with('success', 'Status pesanan berhasil di-update!');
+
+        $order->update(['status' => $validated['status']]);
+
+        return to_route('admin.orders.index')->with('success', 'Order status updated successfully!');
     }
 
+    /**
+     * Print order receipt or kitchen ticket.
+     */
+    public function printOrder(Request $request, Order $order, $type)
+    {
+        $order->load(['details.menu', 'user']);
+
+        $data = [
+            'order' => $order,
+            'type' => $type,
+            'bayar' => $request->query('bayar', 0),
+            'kembali' => $request->query('kembali', 0)
+        ];
+
+        if (in_array($type, ['dapur', 'kasir', 'struk'])) {
+            return view('admin.orders.print', $data);
+        }
+
+        abort(404);
+    }
+    
+    // Legacy alias for printOrder
     public function printStruk(Request $request, Order $order, $type)
     {
-        $period = $request->query('period', '7_days');
-        $endDate = \Carbon\Carbon::now();        
-        $titlePeriod = ''; 
-        if ($period == '30_days') {
-            $startDate = \Carbon\Carbon::now()->subDays(29);
-            $titlePeriod = '30 Hari Terakhir';
-        } elseif ($period == 'this_month') {
-            $startDate = \Carbon\Carbon::now()->startOfMonth();
-            $titlePeriod = 'Bulan Ini (' . $startDate->format('F Y') . ')';
-        } elseif ($period == 'all') {
-            $startDate = \Carbon\Carbon::create(2000, 1, 1); 
-            $titlePeriod = 'Semua Riwayat Transaksi';
-        } else {
-            $startDate = \Carbon\Carbon::now()->subDays(6);
-            $titlePeriod = '7 Hari Terakhir';
-        }
-        $completedOrders = Order::with(['details.menu', 'user'])
-                                ->where('status', 'Selesai')
-                                ->whereBetween('created_at', [
-                                    $startDate->format('Y-m-d') . ' 00:00:00', 
-                                    $endDate->format('Y-m-d') . ' 23:59:59'
-                                ])
-                                ->orderBy('created_at', 'desc')
-                                ->get();
-        $totalRevenue = $completedOrders->sum('total_price');
-        return view('admin.reports-print', [
-            'completedOrders' => $completedOrders,
-            'totalRevenue' => $totalRevenue,
-            'titlePeriod' => $titlePeriod 
-        ]);
+        return $this->printOrder($request, $order, $type);
     }
 
+    /**
+     * Display user feedback.
+     */
     public function feedbackIndex()
     {
-        $feedbacks = Feedback::orderBy('created_at', 'desc')->paginate(10);
-        return view('admin.feedback.index', [
-            'feedbacks' => $feedbacks
-        ]);
+        $feedbacks = Feedback::latest()->paginate(10);
+        return view('admin.feedback.index', compact('feedbacks'));
     }
 
     public function feedbackDestroy(Feedback $feedback)
     {
         $feedback->delete();
-        return redirect()->back()->with('success', 'Feedback berhasil dihapus.');
+        return back()->with('success', 'Feedback deleted successfully.');
     }
 
+    /**
+     * Show the change password form.
+     */
     public function showChangePasswordForm()
     {
-        return view('admin.password'); 
+        return view('admin.password');
     }
 
+    /**
+     * Update the admin's password.
+     */
     public function updatePassword(Request $request)
     {
-        $request->validate([
-            'current_password' => 'required',
-            'new_password' => 'required|string|min:8|confirmed', 
+        $validated = $request->validate([
+            'current_password' => 'required|current_password',
+            'new_password' => 'required|string|min:8|confirmed',
         ]);
 
-        if (!Hash::check($request->current_password, Auth::user()->password)) {
-            return back()->with('error', 'Password lama salah!');
-        }
-
-        User::whereId(Auth::user()->id)->update([
-            'password' => Hash::make($request->new_password)
+        $request->user()->update([
+            'password' => Hash::make($validated['new_password'])
         ]);
 
-        return back()->with('success', 'Password berhasil diubah!');
+        return back()->with('success', 'Password changed successfully!');
     }
 
+    /**
+     * Show QR Code generator page.
+     */
     public function qrCodeIndex()
     {
         return view('admin.qrcode.index');
@@ -251,18 +246,75 @@ class AdminOrderController extends Controller
 
     public function qrCodePrint(Request $request)
     {
-        $request->validate([
-            'nomor_meja' => 'required|integer|min:1'
-        ]);
+        $request->validate(['nomor_meja' => 'required|integer|min:1']);
 
-        $urlTujuan = route('menu.indexPage', ['meja' => $request->nomor_meja]);
-
-        $qrcode = QrCode::size(300)->margin(2)->generate($urlTujuan);
+        $url = route('menu.indexPage', ['meja' => $request->nomor_meja]);
+        $qrcode = QrCode::size(300)->margin(2)->generate($url);
 
         return view('admin.qrcode.print', [
             'qrcode' => $qrcode,
             'nomor_meja' => $request->nomor_meja,
-            'url' => $urlTujuan
+            'url' => $url
         ]);
+    }
+
+    /* |--------------------------------------------------------------------------
+    | Private Helper Functions
+    |--------------------------------------------------------------------------
+    */
+
+    private function getDateRange($period)
+    {
+        $endDate = Carbon::now()->endOfDay();
+        
+        return match($period) {
+            '30_days' => [
+                'start' => Carbon::now()->subDays(29)->startOfDay(),
+                'end' => $endDate,
+                'title' => 'Last 30 Days'
+            ],
+            'this_month' => [
+                'start' => Carbon::now()->startOfMonth(),
+                'end' => $endDate,
+                'title' => 'This Month (' . Carbon::now()->format('F Y') . ')'
+            ],
+            'all' => [
+                'start' => Carbon::create(2000, 1, 1),
+                'end' => $endDate,
+                'title' => 'All Time'
+            ],
+            default => [ // 7 days
+                'start' => Carbon::now()->subDays(6)->startOfDay(),
+                'end' => $endDate,
+                'title' => 'Last 7 Days'
+            ]
+        };
+    }
+
+    private function generateChartData($startDate, $endDate, $period)
+    {
+        $revenueData = Order::where('status', 'Selesai')
+            ->whereBetween('created_at', [$startDate, $endDate])
+            ->selectRaw('DATE(created_at) as date, SUM(total_price) as total')
+            ->groupBy('date')
+            ->pluck('total', 'date');
+
+        $chartLabels = [];
+        $chartValues = [];
+        $daysDiff = $startDate->diffInDays($endDate);
+
+        for ($i = 0; $i <= $daysDiff; $i++) {
+            $date = $startDate->copy()->addDays($i);
+            $dateKey = $date->format('Y-m-d');
+            
+            $label = ($period == '30_days' || $period == 'this_month') 
+                ? $date->format('d M') 
+                : $date->format('D, d M');
+
+            $chartLabels[] = $label;
+            $chartValues[] = $revenueData[$dateKey] ?? 0;
+        }
+
+        return compact('chartLabels', 'chartValues');
     }
 }

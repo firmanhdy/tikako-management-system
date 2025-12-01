@@ -2,105 +2,176 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Controller;
+use App\Models\CartItem;
+use App\Models\Menu;
+use App\Models\Order;
+use App\Models\OrderDetail;
 use Illuminate\Http\Request;
-use App\Models\CartItem; 
-use App\Models\Menu; 
-use App\Models\Order; 
-use App\Models\OrderDetail; 
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Session; 
-use Illuminate\Support\Facades\Storage; 
+use Illuminate\Support\Facades\DB;
 
 class CartController extends Controller
 {
+    /**
+     * Display the user's shopping cart.
+     */
     public function index()
     {
-        $userId = Auth::id(); 
-        if (!$userId) { return redirect()->route('login'); }
-        $cartItems = CartItem::with('menu')
-                            ->where('user_id', $userId)
-                            ->get();
+        $userId = Auth::id();
 
-        return view('cart.index', [
-            'cartItems' => $cartItems
-        ]);
+        if (!$userId) {
+            return to_route('login');
+        }
+
+        $cartItems = CartItem::with('menu')
+            ->where('user_id', $userId)
+            ->get();
+
+        return view('cart.index', compact('cartItems'));
     }
 
+    /**
+     * Add an item to the cart.
+     */
     public function add(Request $request)
     {
-        $request->validate([
-            'menu_id' => 'required|exists:menu,id', 
-            'quantity' => 'required|integer|min:1' 
+        $validated = $request->validate([
+            'menu_id' => 'required|exists:menu,id',
+            'quantity' => 'required|integer|min:1'
         ]);
-        $userId = Auth::id();
-        if (!$userId) { return redirect()->route('login'); }
-        $menu = Menu::find($request->menu_id); 
+
+        $menu = Menu::find($validated['menu_id']);
+
+        // Check menu availability
         if (!$menu || !$menu->is_tersedia) {
-            return redirect()->back()->with('error', 'Maaf, menu ini sedang tidak tersedia.');
+            return back()->with('error', 'Sorry, this menu item is currently unavailable.');
         }
+
+        $userId = Auth::id();
+
+        // Check if item already exists in the cart
         $cartItem = CartItem::where('user_id', $userId)
-                            ->where('menu_id', $request->menu_id)
-                            ->first(); 
+            ->where('menu_id', $menu->id)
+            ->first();
+
         if ($cartItem) {
-            $cartItem->quantity += $request->quantity;
-            $cartItem->save();
+            // Update quantity if item exists
+            $cartItem->increment('quantity', $validated['quantity']);
         } else {
+            // Create new cart entry
             CartItem::create([
-                'user_id' => $userId, 
-                'menu_id' => $request->menu_id,
-                'quantity' => $request->quantity
+                'user_id' => $userId,
+                'menu_id' => $menu->id,
+                'quantity' => $validated['quantity']
             ]);
         }
-        return redirect()->back()->with('success', 'Menu berhasil ditambahkan ke keranjang!');
+
+        return back()->with('success', 'Menu added to cart successfully!');
     }
 
+    /**
+     * Remove an item from the cart.
+     */
     public function destroy(CartItem $cartItem)
     {
-        if ($cartItem->user_id != Auth::id()) {
-            return redirect()->back()->with('error', 'Aksi tidak diizinkan!');
+        // Authorization: Ensure user owns the cart item
+        if ($cartItem->user_id !== Auth::id()) {
+            return back()->with('error', 'Unauthorized action.');
         }
+
         $cartItem->delete();
-        return redirect()->back()->with('success', 'Item berhasil dihapus dari keranjang.');
+
+        return back()->with('success', 'Item removed from cart.');
     }
 
+    /**
+     * Process checkout using Database Transactions.
+     */
     public function checkout(Request $request)
     {
         $request->validate([
-            'nomor_meja' => 'required|string|max:50'
+            'nomor_meja' => 'required|string|max:50',
+            'note' => 'nullable|string'
         ]);
 
         $userId = Auth::id();
-        if (!$userId) { return redirect()->route('login'); } 
+        
         $cartItems = CartItem::with('menu')
-                            ->where('user_id', $userId)
-                            ->get();
+            ->where('user_id', $userId)
+            ->get();
+
         if ($cartItems->isEmpty()) {
-            return redirect()->back()->with('error', 'Keranjang Anda kosong!');
+            return back()->with('error', 'Your cart is empty.');
         }
+
+        // Final stock/availability check before processing
         foreach ($cartItems as $item) {
             if (!$item->menu || !$item->menu->is_tersedia) {
-                return redirect()->route('cart.index')->with('error', 'Maaf, item "' . $item->menu->nama_menu . '" baru saja habis dan dihapus dari keranjang Anda.');
+                $item->delete(); // Auto-remove invalid items
+                return to_route('cart.index')->with(
+                    'error', 
+                    "Sorry, item '{$item->menu->nama_menu}' is out of stock and has been removed from your cart."
+                );
             }
         }
-        $totalPrice = 0;
-        foreach ($cartItems as $item) {
-            $totalPrice += $item->menu->harga * $item->quantity;
+
+        // Use Database Transaction to ensure data integrity
+        try {
+            $orderId = DB::transaction(function () use ($request, $userId, $cartItems) {
+                
+                // Calculate total price
+                $totalPrice = $cartItems->sum(fn($item) => $item->menu->harga * $item->quantity);
+
+                // 1. Create Main Order
+                $order = Order::create([
+                    'user_id' => $userId,
+                    'nomor_meja' => $request->nomor_meja,
+                    'total_price' => $totalPrice,
+                    'status' => 'Diterima',
+                    'note' => $request->note
+                ]);
+
+                // 2. Migrate Cart Items to Order Details
+                foreach ($cartItems as $item) {
+                    OrderDetail::create([
+                        'order_id' => $order->id,
+                        'menu_id' => $item->menu_id,
+                        'quantity' => $item->quantity,
+                        'price' => $item->menu->harga,
+                        'note' => $item->note
+                    ]);
+                }
+
+                // 3. Clear User's Cart
+                CartItem::where('user_id', $userId)->delete();
+
+                return $order->id;
+            });
+
+            return to_route('order.success')->with('orderId', $orderId);
+
+        } catch (\Exception $e) {
+            // Log::error($e);
+            return back()->with('error', 'System error occurred during checkout. Please try again.');
         }
-        $order = Order::create([
-            'user_id' => $userId, 
-            'nomor_meja' => $request->nomor_meja,
-            'total_price' => $totalPrice,
-            'status' => 'Diterima' 
+    }
+
+    /**
+     * Update item specific notes (e.g., "No spicy").
+     */
+    public function updateNote(Request $request, CartItem $cartItem)
+    {
+        if ($cartItem->user_id !== Auth::id()) {
+            return back()->with('error', 'Unauthorized');
+        }
+
+        $validated = $request->validate([
+            'note' => 'nullable|string|max:255'
         ]);
-        foreach ($cartItems as $item) {
-            OrderDetail::create([
-                'order_id' => $order->id, 
-                'menu_id' => $item->menu_id,
-                'quantity' => $item->quantity,
-                'price' => $item->menu->harga 
-            ]);
-        }
-        CartItem::where('user_id', $userId)->delete();
-        return redirect()->route('order.success')->with('orderId', $order->id);
+
+        $cartItem->update(['note' => $validated['note']]);
+
+        return back()->with('success', 'Note saved successfully!');
     }
 }

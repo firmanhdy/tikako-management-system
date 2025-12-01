@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="id">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -13,6 +13,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
 
     <style>
+        /* Global Styling */
         body { font-family: 'Inter', sans-serif; background-color: #f4f6f9; }
         
         /* SIDEBAR */
@@ -21,7 +22,7 @@
             height: 100vh;
             background-color: #212529;
             color: #fff;
-            position: fixed; /* Bikin sidebar diam */
+            position: fixed; 
             top: 0; left: 0;
             z-index: 1000;
             overflow-y: auto;
@@ -46,7 +47,7 @@
 
         /* MAIN CONTENT */
         .main-content {
-            margin-left: 260px; /* Geser konten ke kanan selebar sidebar */
+            margin-left: 260px; 
             display: flex; flex-direction: column;
             min-height: 100vh;
         }
@@ -59,7 +60,7 @@
         }
         .content-wrapper {
             padding: 30px;
-            flex: 1; /* Ini memaksa footer turun ke bawah */
+            flex: 1; 
         }
         footer {
             background-color: #fff; padding: 15px 0;
@@ -70,7 +71,7 @@
 </head>
 <body>
 
-    {{-- 1. SIDEBAR (Fixed) --}}
+    {{-- 1. SIDEBAR (Fixed Navigation) --}}
     <nav class="sidebar">
         <a href="{{ route('admin.dashboard') }}" class="sidebar-brand">
             <i class="bi bi-shield-lock-fill me-2"></i> ADMIN PANEL
@@ -80,40 +81,40 @@
                 <i class="bi bi-speedometer2"></i> Dashboard
             </a>
 
-            <div class="sidebar-heading">Operasional</div>
+            <div class="sidebar-heading">Operations</div>
             <a href="{{ route('admin.orders.index') }}" class="sidebar-link {{ request()->routeIs('admin.orders.*') ? 'active' : '' }}">
-                <i class="bi bi-receipt"></i> Pesanan Dapur
+                <i class="bi bi-receipt"></i> Kitchen Orders
             </a>
             <a href="{{ route('menu.index') }}" class="sidebar-link {{ request()->routeIs('menu.*') ? 'active' : '' }}">
-                <i class="bi bi-cup-hot"></i> Manajemen Menu
+                <i class="bi bi-cup-hot"></i> Menu Management
             </a>
 
-            <div class="sidebar-heading">Laporan & Data</div>
+            <div class="sidebar-heading">Reports & Data</div>
             <a href="{{ route('admin.reports.index') }}" class="sidebar-link {{ request()->routeIs('admin.reports.*') ? 'active' : '' }}">
-                <i class="bi bi-bar-chart-line"></i> Laporan Penjualan
+                <i class="bi bi-bar-chart-line"></i> Sales Report
             </a>
             <a href="{{ route('admin.customers.index') }}" class="sidebar-link {{ request()->routeIs('admin.customers.*') ? 'active' : '' }}">
-                <i class="bi bi-people"></i> Data Pelanggan
+                <i class="bi bi-people"></i> Customer Data
             </a>
             <a href="{{ route('admin.feedback.index') }}" class="sidebar-link {{ request()->routeIs('admin.feedback.*') ? 'active' : '' }}">
-                <i class="bi bi-chat-quote"></i> Kritik & Saran
+                <i class="bi bi-chat-quote"></i> Feedback
             </a>
             <a href="{{ route('admin.qrcode.index') }}" class="sidebar-link {{ request()->routeIs('admin.qrcode.*') ? 'active' : '' }}">
-                <i class="bi bi-qr-code"></i> QR Code Meja
+                <i class="bi bi-qr-code"></i> Table QR Code
             </a>
             <a href="{{ route('admin.password') }}" class="sidebar-link {{ request()->routeIs('admin.password') ? 'active' : '' }}">
-                <i class="bi bi-key"></i> Ganti Password
+                <i class="bi bi-key"></i> Change Password
             </a>
         </div>
     </nav>
 
-    {{-- 2. KONTEN UTAMA (Sebelah Kanan) --}}
+    {{-- 2. MAIN CONTENT --}}
     <div class="main-content">
         
         {{-- Topbar --}}
         <header class="topbar">
             <div class="fw-bold text-secondary d-none d-md-block">
-                Sistem Manajemen Restoran
+                Restaurant Management System
             </div>
 
             {{-- User Dropdown --}}
@@ -128,7 +129,7 @@
                     </div>
                 </a>
                 <ul class="dropdown-menu dropdown-menu-end shadow border-0">
-                    <li><div class="dropdown-header">Halo, {{ Auth::user()->name }}</div></li>
+                    <li><div class="dropdown-header">Hello, {{ Auth::user()->name }}</div></li>
                     <li><hr class="dropdown-divider"></li>
                     <li>
                         <form action="{{ route('admin.logout') }}" method="POST">
@@ -142,7 +143,7 @@
             </div>
         </header>
 
-        {{-- Isi Halaman --}}
+        {{-- Content Area --}}
         <div class="content-wrapper">
             @if(session('success'))
                 <div class="alert alert-success alert-dismissible fade show mb-4" role="alert">
@@ -154,7 +155,7 @@
             @yield('content')
         </div>
 
-        {{-- Footer (Sekarang pasti di bawah) --}}
+        {{-- Footer --}}
         <footer>
             &copy; {{ date('Y') }} Tikako Management System. All rights reserved.
         </footer>

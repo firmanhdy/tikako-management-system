@@ -1,44 +1,43 @@
 @extends('layouts.admin')
 
-@section('title', 'Laporan Penjualan - Tikako')
+@section('title', 'Sales Report - Tikako')
 
 @section('content')
 
-    {{-- Header Halaman --}}
+    {{-- Page Header --}}
     <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4">
         <div>
-            <h1 class="display-6 fw-bold">Laporan Penjualan</h1>
-            <p class="text-muted mb-0">Ringkasan pendapatan dan daftar transaksi yang sudah selesai.</p>
+            <h1 class="display-6 fw-bold">Sales Report</h1>
+            <p class="text-muted mb-0">Revenue summary and list of completed transactions.</p>
         </div>
         <div class="mt-3 mt-md-0">
-            {{-- TOMBOL DROPDOWN CETAK --}}
+            {{-- Print Button Dropdown --}}
             <div class="btn-group shadow-sm">
                 <button type="button" class="btn btn-primary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
-                    <i class="bi bi-printer-fill me-2"></i> Cetak Laporan
+                    <i class="bi bi-printer-fill me-2"></i> Print Report
                 </button>
                 <ul class="dropdown-menu dropdown-menu-end">
-                    {{-- Pilihan Periode Cetak --}}
-                    <li><h6 class="dropdown-header">Pilih Periode</h6></li>
+                    <li><h6 class="dropdown-header">Select Period</h6></li>
                     
                     <li>
                         <a class="dropdown-item" href="{{ route('admin.reports.print', ['period' => '7_days']) }}" target="_blank">
-                            7 Hari Terakhir
+                            Last 7 Days
                         </a>
                     </li>
                     <li>
                         <a class="dropdown-item" href="{{ route('admin.reports.print', ['period' => '30_days']) }}" target="_blank">
-                            30 Hari Terakhir
+                            Last 30 Days
                         </a>
                     </li>
                     <li>
                         <a class="dropdown-item" href="{{ route('admin.reports.print', ['period' => 'this_month']) }}" target="_blank">
-                            Bulan Ini
+                            This Month
                         </a>
                     </li>
                     <li><hr class="dropdown-divider"></li>
                     <li>
                         <a class="dropdown-item text-danger" href="{{ route('admin.reports.print', ['period' => 'all']) }}" target="_blank">
-                            Semua Riwayat
+                            All History
                         </a>
                     </li>
                 </ul>
@@ -47,66 +46,65 @@
 
     </div>
 
-    {{-- Kartu Ringkasan (Summary Card) --}}
+    {{-- SUMMARY & CHART SECTION --}}
     <div class="row mb-4">
+        {{-- Revenue Summary Card --}}
         <div class="col-md-4">
             <div class="card border-0 shadow-sm bg-success text-white h-100">
                 <div class="card-body d-flex flex-column justify-content-between">
                     <div>
-                        <h6 class="text-uppercase opacity-75 mb-2">Total Pendapatan Bersih</h6>
+                        <h6 class="text-uppercase opacity-75 mb-2">Total Net Revenue</h6>
                         <h2 class="display-5 fw-bold mb-0">Rp {{ number_format($totalRevenue, 0, ',', '.') }}</h2>
                     </div>
                     <div class="mt-3 pt-3 border-top border-white border-opacity-25">
-                        <small class="opacity-75"><i class="bi bi-info-circle me-1"></i> Berdasarkan {{ $completedOrders->count() }} transaksi selesai.</small>
+                        <small class="opacity-75"><i class="bi bi-info-circle me-1"></i> Based on {{ $completedOrders->count() }} completed transactions.</small>
                     </div>
                 </div>
             </div>
         </div>
         
-        {{-- Bagian Kanan: GRAFIK PENJUALAN (CHART) --}}
+        {{-- Sales Chart --}}
         <div class="col-md-8">
             <div class="card border-0 shadow-sm h-100 bg-white">
                 
-                {{-- HEADER KARTU: Ada Judul & Tombol Filter --}}
                 <div class="card-header bg-white border-0 pb-0 pt-3 d-flex justify-content-between align-items-center">
                     <h6 class="text-uppercase text-muted mb-0 small fw-bold">
-                        <i class="bi bi-graph-up me-1"></i> {{ $titleChart }}
+                        <i class="bi bi-graph-up me-1"></i> Sales Trend ({{ $titleChart }})
                     </h6>
                     
-                    {{-- GROUP TOMBOL FILTER --}}
+                    {{-- Period Filter Buttons --}}
                     <div class="btn-group btn-group-sm" role="group">
                         <a href="{{ route('admin.reports.index', ['period' => '7_days']) }}" 
                            class="btn {{ $currentPeriod == '7_days' ? 'btn-dark' : 'btn-outline-light text-secondary' }}">
-                           7 Hari
+                            7 Days
                         </a>
                         <a href="{{ route('admin.reports.index', ['period' => '30_days']) }}" 
                            class="btn {{ $currentPeriod == '30_days' ? 'btn-dark' : 'btn-outline-light text-secondary' }}">
-                           30 Hari
+                            30 Days
                         </a>
                         <a href="{{ route('admin.reports.index', ['period' => 'this_month']) }}" 
                            class="btn {{ $currentPeriod == 'this_month' ? 'btn-dark' : 'btn-outline-light text-secondary' }}">
-                           Bulan Ini
+                            This Month
                         </a>
                     </div>
                 </div>
 
                 <div class="card-body pt-2">
-                    {{-- Canvas ini adalah tempat Grafik digambar --}}
-                    <canvas id="salesChart" style="max-height: 220px;"></canvas> {{-- Tinggi saya tambah dikit biar lega --}}
+                    <canvas id="salesChart" style="max-height: 220px;"></canvas> 
                 </div>
             </div>
         </div>
     </div>
 
-    {{-- Tabel Laporan --}}
+    {{-- TRANSACTION HISTORY TABLE --}}
     <div class="card shadow-sm border-0">
         <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
-            <h5 class="mb-0 fw-bold text-secondary"><i class="bi bi-receipt me-2"></i>Riwayat Transaksi</h5>
+            <h5 class="mb-0 fw-bold text-secondary"><i class="bi bi-receipt me-2"></i>Transaction History</h5>
             
-            {{-- Bagian Filter Pencarian --}}
+            {{-- Search Form --}}
             <form action="{{ route('admin.reports.index') }}" method="GET" style="width: 250px;">
                 
-                {{-- PENTING: Simpan filter tanggal saat ini agar tidak reset saat search --}}
+                {{-- IMPORTANT: Preserve current period filter during search --}}
                 <input type="hidden" name="period" value="{{ $currentPeriod }}">
                 
                 <div class="input-group input-group-sm">
@@ -116,14 +114,14 @@
                     <input type="text" 
                            name="search" 
                            class="form-control border-start-0 ps-0" 
-                           placeholder="Cari ID, Meja, atau Nama..." 
-                           value="{{ request('search') }}"> {{-- Biar teks yg diketik tidak hilang --}}
+                           placeholder="Search ID, Table, or Name..." 
+                           value="{{ request('search') }}"> 
                            
                     @if(request('search'))
-                        {{-- Tombol Reset (X) muncul kalau sedang mencari --}}
+                        {{-- Reset Search Button --}}
                         <a href="{{ route('admin.reports.index', ['period' => $currentPeriod]) }}" 
                            class="btn btn-outline-secondary border-start-0" 
-                           title="Hapus Pencarian">
+                           title="Clear Search">
                             <i class="bi bi-x-lg"></i>
                         </a>
                     @endif
@@ -136,11 +134,11 @@
                 <table class="table table-hover align-middle mb-0"> 
                     <thead class="bg-light text-muted small text-uppercase">
                         <tr>
-                            <th class="ps-4">ID Order</th>
-                            <th>Tanggal</th>
-                            <th>Pemesan</th>
-                            <th>Meja</th>
-                            <th>Detail Pesanan</th>
+                            <th class="ps-4">Order ID</th>
+                            <th>Date</th>
+                            <th>Customer</th>
+                            <th>Table</th>
+                            <th>Order Details</th>
                             <th class="text-end pe-4">Total</th>
                         </tr>
                     </thead>
@@ -158,19 +156,18 @@
                                     @if($order->user)
                                         {{ $order->user->name }}
                                     @else
-                                        <span class="text-muted fst-italic">Tamu</span>
+                                        <span class="text-muted fst-italic">Guest</span>
                                     @endif
                                 </td>
 
                                 <td><span class="badge bg-light text-dark border">{{ $order->nomor_meja }}</span></td>
 
-                                {{-- Kolom Detail Item yang Rapi --}}
                                 <td>
                                     <div class="d-flex flex-column gap-1">
                                         @foreach ($order->details as $detail)
                                             <div class="d-flex align-items-center">
                                                 <span class="badge bg-secondary rounded-circle me-2" 
-                                                      style="width: 20px; height: 20px; padding: 0; display: flex; align-items: center; justify-content: center; font-size: 10px;">
+                                                    style="width: 20px; height: 20px; padding: 0; display: flex; align-items: center; justify-content: center; font-size: 10px;">
                                                     {{ $detail->quantity }}
                                                 </span>
                                                 <span class="small text-dark">{{ $detail->menu->nama_menu }}</span>
@@ -187,7 +184,7 @@
                             <tr>
                                 <td colspan="6" class="text-center py-5 text-muted">
                                     <i class="bi bi-clipboard-x fs-1 opacity-50 d-block mb-2"></i>
-                                    Belum ada data penjualan yang selesai.
+                                    No completed sales data found for this period.
                                 </td>
                             </tr>
                         @endforelse
@@ -196,34 +193,33 @@
             </div>
         </div>
         
-        {{-- Footer Pagination (Jika nanti pakai pagination) --}}
-        {{-- <div class="card-footer bg-white py-3">
-             {{ $completedOrders->links() }}
-        </div> --}}
+        {{-- Pagination (Assuming $completedOrders is a collection, not paginated) --}}
+        {{-- If $completedOrders were paginated, you would use: {{ $completedOrders->links() }} --}}
+        {{-- If you wish to paginate the results, update AdminOrderController to use paginate(X) --}}
     </div>
-    {{-- 1. Load Library Chart.js (Wajib Online) --}}
+    
+    {{-- Chart.js Library and Initialization --}}
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    {{-- 2. Konfigurasi Grafik --}}
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const ctx = document.getElementById('salesChart').getContext('2d');
             
-            // Ambil data dari Controller (Dikirim lewat PHP json_encode)
-            const labels = {!! json_encode($chartLabels) !!};
-            const dataValues = {!! json_encode($chartValues) !!};
+            // Data injected from PHP Controller (FIXED: Using fallback '[]' to ensure valid JS syntax)
+            const labels = {!! json_encode($chartLabels) ?: '[]' !!};
+            const dataValues = {!! json_encode($chartValues) ?: '[]' !!};
 
             new Chart(ctx, {
-                type: 'line', // Jenis Grafik: Garis
+                type: 'line', 
                 data: {
-                    labels: labels, // Tanggal (Sumbu X)
+                    labels: labels, 
                     datasets: [{
-                        label: 'Pendapatan (Rp)',
-                        data: dataValues, // Nominal (Sumbu Y)
-                        borderColor: '#198754', // Warna Garis (Hijau Success)
-                        backgroundColor: 'rgba(25, 135, 84, 0.1)', // Warna Arsiran bawah
+                        label: 'Revenue (Rp)',
+                        data: dataValues, 
+                        borderColor: '#198754', // Bootstrap Green (Success)
+                        backgroundColor: 'rgba(25, 135, 84, 0.1)', 
                         borderWidth: 2,
-                        tension: 0.4, // Kelengkungan garis (biar smooth)
-                        fill: true,   // Arsir area bawah garis
+                        tension: 0.4, 
+                        fill: true, 
                         pointBackgroundColor: '#fff',
                         pointBorderColor: '#198754',
                         pointRadius: 4
@@ -233,10 +229,10 @@
                     responsive: true,
                     maintainAspectRatio: false,
                     plugins: {
-                        legend: { display: false }, // Sembunyikan legend biar bersih
+                        legend: { display: false }, 
                         tooltip: {
                             callbacks: {
-                                // Format Tooltip biar ada Rp-nya
+                                // Custom tooltip format for Rupiah
                                 label: function(context) {
                                     let value = context.raw;
                                     return ' Rp ' + value.toLocaleString('id-ID');
@@ -247,16 +243,15 @@
                     scales: {
                         y: {
                             beginAtZero: true,
-                            grid: { borderDash: [2, 4] }, // Garis putus-putus tipis
-                            ticks: { display: false } // Sembunyikan angka sumbu Y biar tidak penuh
+                            grid: { borderDash: [2, 4] }, 
+                            ticks: { display: false } // Hide Y-axis ticks for cleaner look
                         },
                         x: {
-                            grid: { display: false } // Hilangkan garis vertikal
+                            grid: { display: false } 
                         }
                     }
                 }
             });
         });
     </script>
-    
 @endsection
