@@ -4,31 +4,23 @@ A clean, responsive web application built with Laravel to manage customer orders
 
 This project demonstrates strong back-end development skills, adherence to Clean Code principles, and comprehensive database transaction handling.
 
+🛠️ Tech Stack Overview
+
 🚀 Key Features
 
-Customer Ordering: QR code-based ordering directs customers directly to the menu with auto-filled table numbers.
+Customer Ordering (QR Code): Customers order from their table using a QR code scan, with the table number automatically filled.
 
-Real-time Order Monitoring: Admin dashboard monitors new orders and cooking status without reloading.
+Real-time Monitoring (Admin): The admin dashboard displays new order status and currently cooking orders without manual refresh.
 
-Order Management: Admin panel allows status updates (Received, Cooking, Completed, Cancelled).
+Order Management (Kitchen): The admin panel allows status updates for orders (Received, Cooking, Completed, Cancelled).
 
-Sales Reporting: Detailed revenue reports filtered by 7 Days, 30 Days, or Monthly periods.
+Sales Reporting & Analytics 📈: Detailed revenue reports with trend visualization (Chart.js), filterable by period (7 days, 30 days, This Month).
 
-Print Functionality: Generates thermal receipts (Kasir) and kitchen tickets (Dapur).
+Print Functionality 🖨️: Generates thermal receipts (Cashier) and kitchen order tickets (Kitchen Docket) in print-ready format.
 
-Security: Separate login portals and restricted access control using Middleware (IsAdmin).
+Security & Authorization: Strict separation of login portals and control access using Laravel Middleware (IsAdmin).
 
-Authentication: Dedicated user registration/login flow for customers and a separate one for administration.
-
-🛠️ Tech Stack
-
-Backend Framework: Laravel (PHP)
-
-Database: MySQL
-
-Frontend: Blade Templates, Bootstrap 5.3, Vanilla JavaScript (for AJAX/Polling)
-
-Data Visualization: Chart.js (for sales reports)
+Dual Authentication Flow: Separate registration/login flows for customers and administrators.
 
 💻 Installation Guide (For Reviewers/Developers)
 
