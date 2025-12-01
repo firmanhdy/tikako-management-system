@@ -1,4 +1,4 @@
-🍽️ Tikako Management System - Laravel Point of Sale (POS)
+🍽️ Tikako Restaurant Management System (POS)
 
 A clean, responsive web application built with Laravel to manage customer orders, kitchen status, sales reports, and customer data for the Tikako Caffe & Culinary.
 
