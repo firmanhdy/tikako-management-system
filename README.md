@@ -1,59 +1,93 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+🍽️ Tikako Management System - Laravel Point of Sale (POS)
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+A clean, responsive web application built with Laravel to manage customer orders, kitchen status, sales reports, and customer data for the Tikako Caffe & Culinary.
 
-## About Laravel
+This project demonstrates strong back-end development skills, adherence to Clean Code principles, and comprehensive database transaction handling.
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+🚀 Key Features
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+Customer Ordering: QR code-based ordering directs customers directly to the menu with auto-filled table numbers.
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+Real-time Order Monitoring: Admin dashboard monitors new orders and cooking status without reloading.
 
-## Learning Laravel
+Order Management: Admin panel allows status updates (Received, Cooking, Completed, Cancelled).
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
+Sales Reporting: Detailed revenue reports filtered by 7 Days, 30 Days, or Monthly periods.
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+Print Functionality: Generates thermal receipts (Kasir) and kitchen tickets (Dapur).
 
-## Laravel Sponsors
+Security: Separate login portals and restricted access control using Middleware (IsAdmin).
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+Authentication: Dedicated user registration/login flow for customers and a separate one for administration.
 
-### Premium Partners
+🛠️ Tech Stack
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+Backend Framework: Laravel (PHP)
 
-## Contributing
+Database: MySQL
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+Frontend: Blade Templates, Bootstrap 5.3, Vanilla JavaScript (for AJAX/Polling)
 
-## Code of Conduct
+Data Visualization: Chart.js (for sales reports)
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+💻 Installation Guide (For Reviewers/Developers)
 
-## Security Vulnerabilities
+To run this project locally, you must have PHP (8.1+), Composer, and a MySQL instance running.
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+Clone the Repository:
 
-## License
+git clone [https://github.com/firmanhdy/tikako-management-system.git](https://github.com/firmanhdy/tikako-management-system.git)
+cd tikako-management-system
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+
+Setup Environment & Key:
+
+# Copy the example file (critical step)
+cp .env.example .env
+
+# Generate application key
+php artisan key:generate
+
+
+Note: Edit the newly created .env file and configure your database credentials (DB_DATABASE, DB_USERNAME, DB_PASSWORD).
+
+Install Dependencies:
+
+composer install
+# If running frontend locally (for asset compilation):
+# npm install
+# npm run build 
+
+
+Database Migration & Seeding:
+This command runs migrations and seeds the default Admin/User accounts.
+
+php artisan migrate --seed
+
+
+Run the Application:
+
+php artisan serve
+
+
+(The application will be accessible at http://127.0.0.1:8000)
+
+🔑 Default Credentials
+
+Role
+
+Email
+
+Password
+
+Admin
+
+admin@tikako.com
+
+password123
+
+Customer
+
+user@gmail.com
+
+password123
